@@ -10,6 +10,8 @@ import org.junit.Test;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.Pipeline;
+import redis.clients.util.Hashing;
+import redis.clients.util.SafeEncoder;
 
 public class JedisExample {
 	
@@ -103,14 +105,6 @@ public class JedisExample {
 			thread.join();
 		}
 		JedisUitl.closePool(pool);
-	}
-	/**
-	 * 演示redis的协议的用法
-	 * 并用这个协议简单的执行set命令，而不是简单的jedis.set
-	 * 关于redis的协议的更多信息，请参考readme.md文件
-	 */
-	public void redisProtocol(){
-		
 	}
 	
 	
