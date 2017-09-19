@@ -1,10 +1,18 @@
 package com.cxh.redis;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import redis.clients.jedis.Jedis;
@@ -14,6 +22,15 @@ import redis.clients.util.Hashing;
 import redis.clients.util.SafeEncoder;
 
 public class JedisExample {
+	
+	@After
+	@Before
+	public void cleanRedis(){
+		System.out.println("清理进行中");
+		JedisUitl.cleanRedis(null);
+	}
+	
+	
 	
 	/**
 	 * 利用redis，设置String的key和value，并取出。
@@ -74,7 +91,6 @@ public class JedisExample {
 	 */
 	@Test
 	public void redisPoolExampel() throws InterruptedException{
-		JedisUitl.cleanRedis(null);
 		final JedisPool pool = new JedisPool(new GenericObjectPoolConfig(), "centos", 6379, 2000, "10086");
 		//该对象可以实现原子性的自增，不过，VM优化无效，酌情使用
 		final AtomicInteger atomicInteger = new AtomicInteger();
@@ -106,6 +122,155 @@ public class JedisExample {
 		}
 		JedisUitl.closePool(pool);
 	}
+	
+	/**
+	 * 测试jedis  exists方法，用于判断键值是否存在redis
+	 */
+	@Test
+	public  void existsKey(){
+		String key = "Set";
+		String value= "Value";
+		Jedis jedis = JedisUitl.getJedis();
+		jedis.set(key,value);
+		//该方法有重载，传入多个key，可以判断有多少个key是存在的，返回存在的个数
+		boolean exists = jedis.exists(key);
+		//这个是静态导入，所以不需要写类名
+		 assertTrue(exists);
+		JedisUitl.closeRedis(jedis);
+	}
+	/**
+	 * 测试jedis的删除方法
+	 */
+	@Test
+	public  void del(){
+		String key1= "key1"; String value1 = "value1";
+		String key2 = "key2"; String value2 = "value2";
+		String key3 = "key3"; String value3 ="value3";
+		Jedis jedis = JedisUitl.getJedis();
+		jedis.set(key1, value1);
+		jedis.set(key2, value2);
+		jedis.set(key3, value3);
+		//删除传进去的键列表，返回删除成功的个数
+		long delCount = jedis.del(key1,key2,key3);
+		assertEquals(delCount, 3L);
+		JedisUitl.closeRedis(jedis);
+	}
+	/**
+	 * 测试jedis的type方法：传一个key，判断给key的value是什么类型
+	 * 类型主要有几种：
+	 * none
+	 * string
+	 * list
+	 * set
+	 */
+	@Test
+	public void type(){
+		String key = "key";
+		String value = "value";
+		Jedis jedis = JedisUitl.getJedis();
+		jedis.set(key, value);
+		String type = jedis.type(key);
+		assertEquals("string",type);
+		JedisUitl.closeRedis(jedis);
+	}
+	
+	/**
+	 * 模糊搜索key，把符合条件的key全选出来
+	 * 不建议在生产环境使用，可能会降低效率，破坏数据库性能
+	 */
+	@Test
+	public void keys(){
+		Jedis jedis = JedisUitl.getJedis();
+		jedis.set("key", "vue");
+		jedis.set("key1", "key2");
+		Set<String > result = jedis.keys("key*");
+		//预期执行结果为key和key1
+		Set<String> expected  = new HashSet<String>();
+		expected.add("key");
+		expected.add("key1");
+		assertEquals(expected, result);
+		JedisUitl.closeRedis(jedis);
+	}
+	
+		/**
+		 * randomKey从当前的redis随机选一个key
+		 */
+	  @Test
+	  public void randomKey() {
+		 Jedis  jedis = JedisUitl.getJedis();
+		 //从一无所有的redis取东西，当然就什么都没有了
+	    assertEquals(null, jedis.randomKey());
+
+	    jedis.set("foo", "bar");
+	    //只有一个键的情况下当然就只取一个咯
+	    assertEquals("foo", jedis.randomKey());
+
+	    JedisUitl.closeRedis(jedis);
+
+	}
+	  /**
+	   * 测试重命名功能，将key重命名，如果重命名的key已存在，那个已存在的key-value会删除，新的key取而代之
+	   * 同胞兄弟：renamenx
+	   * 如果重命名后的key已存在，返回状态码0，表示重命名失败
+	   */
+	  @Test
+	  public void rename(){
+		  Jedis jedis = JedisUitl.getJedis();
+		   jedis.set("key", "value");
+		   String status = jedis.rename("key", "newkey");
+		  //断言一下看重命名成功了没
+		  assertEquals("OK", status);
+		 boolean exists =  jedis.exists("newkey");
+		 //测试重命名的key在redis是否存在
+		 assertTrue(exists);
+		  JedisUitl.closeRedis(jedis);
+	  }
+	  
+	  /**
+	   * dbSize方法，测试redis数据库里面拥有多少key
+	   */
+	  @Test
+	  public void deSize(){
+		  Jedis jedis = JedisUitl.getJedis();
+		  long size = jedis.dbSize();
+		    assertEquals(0, size);
+		    jedis.set("foo", "bar");
+		    size = jedis.dbSize();
+		    assertEquals(1, size);
+			JedisUitl.closeRedis(jedis);
+	  }
+	  /**
+	   * 测试超时设置,顺便演示下ttl，它用来看key还有多少寿命来着
+	   * 孪生兄弟：expireAt 可以指定时间戳作为超时时间，换句话说，你可以指定在某年某月某日过时
+	   * @throws InterruptedException
+	   */
+	  @Test
+	  public void expire() throws InterruptedException{
+		  Jedis jedis = JedisUitl.getJedis();
+		  //指定一个key300秒后超时，但是现在数据库一无所有，所以执行失败，返回0
+		  long status = jedis.expire("NONE", 300);
+		  assertEquals(0L, status);
+		  
+		  jedis.set("key", "value");
+		  //断言设置过期成功否
+		  status = jedis.expire("key", 10);
+		  //ttl如果没有该key或者key永不过期，返回-1
+		 long laveTime =  jedis.ttl("key");
+		 System.out.println("key的寿命还有"+laveTime+"秒");
+		  assertEquals(1L, status);
+		  boolean exists =  jedis.exists("key");
+		  //立即查看该键存在否
+		  assertTrue(exists);
+		  Thread.sleep(10000L);
+		  //10秒后看看该键删除否
+		  exists =  jedis.exists("key");
+		  assertFalse(exists);
+		 JedisUitl.closeRedis(jedis);
+	  }
+	  
+	  
+	  
+	
 	
 	
 	

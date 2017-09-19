@@ -46,15 +46,19 @@ public class JedisUitl {
 	
 	/**
 	 * 清空redis的所有数据，如果没有传jedis，将自己创建一个
+	 * 有传jedis的，方法不会关掉你的jedis
 	 * @param jedis
 	 */
 	public static void cleanRedis(Jedis jedis){
 		if(jedis == null){
 			jedis=getJedis();
+			jedis.flushAll();
+			jedis.quit();
+			jedis.disconnect();
+		}else{
+			jedis.flushAll();
 		}
-		jedis.flushAll();
-		jedis.quit();
-		jedis.disconnect();
+		
 	}
 	
 	/**
