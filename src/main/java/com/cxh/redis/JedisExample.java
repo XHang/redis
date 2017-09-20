@@ -12,6 +12,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -23,11 +24,19 @@ import redis.clients.util.SafeEncoder;
 
 public class JedisExample {
 	
+	private static Jedis jedis;
 	@After
-	@Before
 	public void cleanRedis(){
-		System.out.println("清理进行中");
-		JedisUitl.cleanRedis(null);
+		System.out.println("清理犯罪现场");
+		JedisUitl.cleanRedis(jedis);
+		JedisUitl.closeRedis(jedis);
+	}
+	@Before
+	public void init(){
+		jedis=JedisUitl.getJedis();
+		System.out.println("一屋不扫何以扫天下");
+		JedisUitl.cleanRedis(jedis);
+		
 	}
 	
 	
@@ -37,7 +46,7 @@ public class JedisExample {
 	 */
 	@Test
 	public void setGetString(){
-		Jedis jedis = JedisUitl.getJedis();
+		 
 		jedis.set("key","value");
 		System.out.println("成功存入redis");
 		jedis.close();
@@ -54,7 +63,7 @@ public class JedisExample {
 	 */
 	@Test
 	public void otherOperating(){
-		Jedis jedis = JedisUitl.getJedis();
+		 
 		//清除所有键
 		 jedis.flushAll();
 		 
@@ -74,7 +83,7 @@ public class JedisExample {
 	 */
 	@Test
 	public void pipelineExample(){
-		Jedis jedis = JedisUitl.getJedis();
+		 
 		Pipeline  pipeline=jedis.pipelined();
 		for(int i=0;i<5000;i++){
 			pipeline.set("key"+i, "value"+i);
@@ -130,7 +139,7 @@ public class JedisExample {
 	public  void existsKey(){
 		String key = "Set";
 		String value= "Value";
-		Jedis jedis = JedisUitl.getJedis();
+		 
 		jedis.set(key,value);
 		//该方法有重载，传入多个key，可以判断有多少个key是存在的，返回存在的个数
 		boolean exists = jedis.exists(key);
@@ -146,7 +155,7 @@ public class JedisExample {
 		String key1= "key1"; String value1 = "value1";
 		String key2 = "key2"; String value2 = "value2";
 		String key3 = "key3"; String value3 ="value3";
-		Jedis jedis = JedisUitl.getJedis();
+		 
 		jedis.set(key1, value1);
 		jedis.set(key2, value2);
 		jedis.set(key3, value3);
@@ -167,7 +176,7 @@ public class JedisExample {
 	public void type(){
 		String key = "key";
 		String value = "value";
-		Jedis jedis = JedisUitl.getJedis();
+		 
 		jedis.set(key, value);
 		String type = jedis.type(key);
 		assertEquals("string",type);
@@ -180,7 +189,7 @@ public class JedisExample {
 	 */
 	@Test
 	public void keys(){
-		Jedis jedis = JedisUitl.getJedis();
+		 
 		jedis.set("key", "vue");
 		jedis.set("key1", "key2");
 		Set<String > result = jedis.keys("key*");
@@ -215,7 +224,7 @@ public class JedisExample {
 	   */
 	  @Test
 	  public void rename(){
-		  Jedis jedis = JedisUitl.getJedis();
+		   
 		   jedis.set("key", "value");
 		   String status = jedis.rename("key", "newkey");
 		  //断言一下看重命名成功了没
@@ -231,7 +240,7 @@ public class JedisExample {
 	   */
 	  @Test
 	  public void deSize(){
-		  Jedis jedis = JedisUitl.getJedis();
+		   
 		  long size = jedis.dbSize();
 		    assertEquals(0, size);
 		    jedis.set("foo", "bar");
@@ -246,7 +255,6 @@ public class JedisExample {
 	   */
 	  @Test
 	  public void expire() throws InterruptedException{
-		  Jedis jedis = JedisUitl.getJedis();
 		  //指定一个key300秒后超时，但是现在数据库一无所有，所以执行失败，返回0
 		  long status = jedis.expire("NONE", 300);
 		  assertEquals(0L, status);
@@ -268,10 +276,50 @@ public class JedisExample {
 		 JedisUitl.closeRedis(jedis);
 	  }
 	  
+	  /**
+	   * 演示一下redis的分区功能：分区内的数据互不干扰
+	   * 默认客户端连的是分区0
+	   */
+	  @Test
+	  public void select(){
+		  	jedis.set("foo", "bar");
+		    String status = jedis.select(1);
+		    //测试分区切换是否成功
+		    assertEquals("OK", status);
+		    //切换分区1后，分区0的数据不会读取到
+		    assertEquals(null, jedis.get("foo"));
+		    //再次切换为分区0，读取之前设置的数据
+		    status = jedis.select(0);
+		    assertEquals("OK", status);
+		    assertEquals("bar", jedis.get("foo"));
+	  }
+	  /**
+	   * 虽然没有注释但是一看就知道getDB是获取当前客户端在哪个分区内的
+	   */
+	  @Test
+	  public void getDB() {
+		 Assert.assertEquals(new Long(0), jedis.getDB());
+	    jedis.select(1);
+	    Assert.assertEquals(new Long(1), jedis.getDB());
+	  }	  
 	  
+	  /**
+	   * 测试move方法，将指定的key-value迁移到另一个分区内
+	   */
+	  @Test
+	  public void move() {
+		 //将一个不存在的key-value迁移到另一个分区，当然失败
+	    long status = jedis.move("foo", 1);
+	    assertEquals(0, status);
+	    
+	    //set一个value，并迁移到另一个分区
+	    jedis.set("foo", "bar");
+	    status = jedis.move("foo", 1);
+	    assertEquals(1, status);
+	    assertEquals(null, jedis.get("foo"));
+	    //客户端访问另一个分区，并读取之前迁移的键值对
+	    jedis.select(1);
+	    assertEquals("bar", jedis.get("foo"));
+	}
 	  
-	
-	
-	
-	
 }
