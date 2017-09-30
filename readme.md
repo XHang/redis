@@ -149,3 +149,45 @@ Error是一个通用的错误，事实上，redis服务器还可能发来WRONGTY
 
 3. 如何用redis客户端连其他主机的redis  
 `redis-cli -a password -p port -h host`  
+
+## redis集群
+注：本教程需要redis3.0以上版本
+### redis集群能干什么？  
+1. 数据分片，就是说，存入redis的数据可以分发在集群的每一台服务器上，减轻主服务器负担
+2. 更高的数据可用性，一台redis分支服务器挂了，千千万台redis服务器站出来了  
+
+	通用知识：
+	每一个集群的redis节点都应该打开两个TCP连接，一个tcp端口用于于客户端连接，一个tcp端口用于集群总线，通常用来于故障检测，配置更新，故障转移授权等 .要确保这两个端口是开放.
+
+### 要使集群正常工作，需要搞定
+1.   集群总线端口必须在任何节点都能够ping通
+2.  用于与客户端进行通信的普通客户端通信端口（通常为6379）对所有需要到达集群的客户端加上所有其他集群节点（使用客户端端口进行密钥迁移）。不懂。。
+
+### 集群的几个配置参数
+cluster-enabled <yes/no>  yes使用集群模式，no就是独立模式了
+cluster-node-timeout <milliseconds>  子节点不可达的超时时间
+
+### 创建一个简单的集群
+注意：按预期工作的最小集群需要至少包含三个主节点.  
+
+1. 首先写集群配置文件
+
+	port 7000
+	cluster-enabled yes	
+	cluster-config-file nodes.conf  --这个文件不用创建，启动时由Redis Cluster实例生成，并由他更新
+	cluster-node-timeout 5000
+	appendonly yes
+
+2. 创建文件夹来存放配置文件
+建议结构如下
+		--/redis-4.0.1/cluster
+						  --/  7001
+						  --/  7002
+						   --/  7003
+						    --/  7004
+ 
+
+## redis的命令集合
+
+### 有关哈希存储的命令
+`hgetall key`  得到所有key的哈希存储记录
