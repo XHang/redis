@@ -191,3 +191,4 @@ cluster-node-timeout <milliseconds>  子节点不可达的超时时间
 
 ### 有关哈希存储的命令
 `hgetall key`  得到所有key的哈希存储记录
+ 
