@@ -30,7 +30,7 @@ public class MapUitl {
 	 * @param clazz 方法所属类
 	 * @return
 	 */
-	public static boolean isPropertiesMethod(Method method,Class clazz){
+	public static boolean isPropertiesMethod(Method method,Class<?> clazz){
 		String methodName = method.getName();
 		boolean isPropertiesMethod=false;
 		try{
@@ -51,7 +51,7 @@ public class MapUitl {
 		}
 		return isPropertiesMethod;
 	}
-	public  boolean isSetPropertiesMethod(Method method,Class clazz){
+	public  boolean isSetPropertiesMethod(Method method,Class<?> clazz){
 		String methodName = method.getName();
 		try{
 			if(methodName.contains("set")){

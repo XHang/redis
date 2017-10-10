@@ -1,8 +1,5 @@
 # 说明：redis的java连接示例
 包括以下教程
-1.  
-
-
 ## redis的协议
 ### 简介：  
 redis使用了自家创建的一种叫做RESP（REdis Serialization Protocol） 
@@ -150,6 +147,7 @@ Error是一个通用的错误，事实上，redis服务器还可能发来WRONGTY
 3. 如何用redis客户端连其他主机的redis  
 `redis-cli -a password -p port -h host`  
 
+
 ## redis集群
 注：本教程需要redis3.0以上版本
 ### redis集群能干什么？  
@@ -159,36 +157,68 @@ Error是一个通用的错误，事实上，redis服务器还可能发来WRONGTY
 	通用知识：
 	每一个集群的redis节点都应该打开两个TCP连接，一个tcp端口用于于客户端连接，一个tcp端口用于集群总线，通常用来于故障检测，配置更新，故障转移授权等 .要确保这两个端口是开放.
 
-### 要使集群正常工作，需要搞定
+### 集群的前提要求
 1.   集群总线端口必须在任何节点都能够ping通
 2.  用于与客户端进行通信的普通客户端通信端口（通常为6379）对所有需要到达集群的客户端加上所有其他集群节点（使用客户端端口进行密钥迁移）。不懂。。
+3. 至少有三个以上的master服务器
 
-### 集群的几个配置参数
-cluster-enabled <yes/no>  yes使用集群模式，no就是独立模式了
-cluster-node-timeout <milliseconds>  子节点不可达的超时时间
 
 ### 创建一个简单的集群
-注意：按预期工作的最小集群需要至少包含三个主节点.  
+注意：按预期工作的最小集群需要至少包含三个主节点  
 
+#### 启动示例
 1. 首先写集群配置文件
 
 	port 7000
-	cluster-enabled yes	
-	cluster-config-file nodes.conf  --这个文件不用创建，启动时由Redis Cluster实例生成，并由他更新
-	cluster-node-timeout 5000
+	#yes使用集群模式，no就是独立模式了
+	cluster-enabled yes		
+	#这个文件不用创建，启动时由Redis Cluster实例生成，并由他更新
+	cluster-config-file nodes.conf  
+	#子节点不可达的超时时间
+	cluster-node-timeout 5000  
 	appendonly yes
+	
+可以新建一个文本文件，随便命名，建议命名还是redis.conf.  
+或者用redis安装目录里面的redis.conf....要改彻底点  
 
-2. 创建文件夹来存放配置文件
-建议结构如下
-		--/redis-4.0.1/cluster
-						  --/  7001
-						  --/  7002
-						   --/  7003
-						    --/  7004
- 
+2.  在每一个Master和Salve服务器的redis安装目录都建一个配置文件夹，把第一步的配置文件拷贝进去，注意每一个服务器的port配置都要改一下
+
+3. 完成这步后启动所有的Master和Salve,利用上面两步创建的6个配置文件一个一个启动redis服务器。  
+如果启动过程看到`2278:M 10 Oct 11:09:37.559 * No cluster configuration found, I'm 79f529e7bb2ba26991047e57e3c96576056a282f`  
+那就证明至少配置过程没问题的说
+解释一下这个信息？    
+没有 nodes.conf 配置文件发现，所以第一次启动分支/主服务器会分配一个Node ID，这个Node ID是永久性的，用于区分每一个redis节点    
+*注意*：敲启动命令的时候所处的文件夹就是将来Node.conf文件生成的地方。  
+
+#### 创建集群
+完成以上步骤，还是不够，现在redis实例都是分散的，没有形成一个集群，接下来其实才是重点。需要使用一个redis-trib程序，这个程序是Ruby写的。  
+1. 安装ruby环境
+如果你没有Ruby环境，就挂了。所以当务之急，就是按照Ruby环境
+对于centos来说，只需要这个命令: `yum install ruby`
+2. 
+安装ruby环境后，可以执行这个命令了：`gem install redis`  这个命令要求ruby版本为2.2.2以上。所以注意你安装的ruby版本
+然而yum安装的ruby版本太低，无法运行gem install redis。
+可以用rvm来升级，然而渣网络连不上github。。
+然后又想编译ruby来安装最新版本，成是成功了，但是gem install redis又找不到zlib，网上一查，要安装rvm来解决，好嘛，又兜回来了
+干！
+
+
+
+### redis集群的知识点
+1. redis集群无法保证数据的一致性.比如以下情况
+
+> 客户端向主机写入数据，主机未等其他从机写入成功时就告诉客户端写入成功。答复完后主机奔溃了，从机B被提拔成主机，而刚好从机B没有写入数据，就会造成数据丢失
+
+
 
 ## redis的命令集合
 
 ### 有关哈希存储的命令
 `hgetall key`  得到所有key的哈希存储记录
  
+
+## redis的配置
+1. 如何配置redis的连接端口
+
+
+
