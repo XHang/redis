@@ -1,8 +1,12 @@
 package com.cxh.redis;
 
+import java.io.IOException;
+import java.util.HashSet;
+import java.util.Set;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
-
+import redis.clients.jedis.HostAndPort;
 import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisCluster;
 import redis.clients.jedis.JedisPool;
 
 public class JedisUitl {
@@ -23,6 +27,10 @@ public class JedisUitl {
 	 * 连接池超时毫秒
 	 */
 	public static final int POOL_TIMEOUT = 2000;
+	
+	public static final String NODE_HOST="192.168.2.158";
+	
+	public static final int NODE_PORT = 7001;
 	
 	
 	/**
@@ -77,5 +85,27 @@ public class JedisUitl {
 		if(pool!=null){
 			pool.destroy();
 		}
+	}
+	
+	/**
+	 * 获取redis集群的连接对象
+	 * @return
+	 */
+	public static JedisCluster getRedisClusterConnection(){
+		Set<HostAndPort> jedisClusterNodes = new HashSet<HostAndPort>();
+		//加入一个节点后，Jedis Cluster会自动查找集群节点
+		jedisClusterNodes.add(new HostAndPort(NODE_HOST, NODE_PORT));
+		JedisCluster jc = new JedisCluster(jedisClusterNodes);
+		return jc;
+	}
+	public static void closeClusterConnection(JedisCluster cluster) {
+		try {
+			if(cluster !=null){
+				cluster.close();
+			}
+		} catch (IOException e) {
+			throw new RuntimeException("关闭集群连接失败！",e);
+		}
+	
 	}
 }
