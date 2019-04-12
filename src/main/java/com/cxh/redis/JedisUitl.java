@@ -14,7 +14,7 @@ public class JedisUitl {
 	/**
 	 * redis主机名
 	 */
-	public static final String REDIS_HOST = "centos";
+	public static final String REDIS_HOST = "127.0.0.1";
 	/**
 	 * redis端口
 	 */
@@ -51,6 +51,7 @@ public class JedisUitl {
 			jedis.close();
 		}
 	}
+
 	
 	/**
 	 * 清空redis的所有数据，如果没有传jedis，将自己创建一个
@@ -74,9 +75,12 @@ public class JedisUitl {
 	 * @return
 	 */
 	public static JedisPool   getRedisPool(){
-		JedisPool pool = new JedisPool(new GenericObjectPoolConfig(), REDIS_HOST, REDIS_PORT, POOL_TIMEOUT,PASSWORD );
+		GenericObjectPoolConfig genericObjectPoolConfig = new GenericObjectPoolConfig();
+		genericObjectPoolConfig.setMaxTotal(1000);
+		JedisPool pool = new JedisPool(genericObjectPoolConfig, REDIS_HOST, REDIS_PORT, POOL_TIMEOUT,PASSWORD );
 		return pool;
 	}
+
 	/**
 	 * 关闭redis连接池
 	 * @param pool redis连接池对象

@@ -3,6 +3,18 @@
   <groupId>redis</groupId>
   <artifactId>redis</artifactId>
   <version>0.0.1-SNAPSHOT</version>
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <source>8</source>
+          <target>8</target>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
   <name>redis--for java</name>
   <description>redis -java连接示例</description>
   <dependencies>
@@ -16,5 +28,10 @@
   <artifactId>junit</artifactId>
   <version>4.12</version>
 </dependency>
+    <dependency>
+      <groupId>org.redisson</groupId>
+      <artifactId>redisson</artifactId>
+      <version>3.10.5</version>
+    </dependency>
   </dependencies>
 </project>
